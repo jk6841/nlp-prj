@@ -1,0 +1,64 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+*.so
+build/
+dist/
+wheels/
+*.egg-info
+.eggs/
+
+# Virtual environments
+.venv
+venv/
+env/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Testing / linting / type checking caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.pyright/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# NLP / ML artifacts
+data/
+datasets/
+models/
+checkpoints/
+outputs/
+runs/
+logs/
+wandb/
+mlruns/
+lightning_logs/
+.cache/
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+*.h5
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Claude Code (personal settings)
+.claude/settings.local.json
+
+# macOS
+.DS_Store
