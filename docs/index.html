@@ -10,6 +10,24 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap">
   <link rel="stylesheet" href="assets/junction.css">
   <link rel="stylesheet" href="assets/deck.css">
+  <style>
+    /* Relation diagram (slide 06). Row heights are fixed so the connector lines up:
+       stock_id row center = 1px border + 60px name + 48px row + 24px = 133px. */
+    .erd { display: flex; align-items: flex-start; }
+    .erd__entity { flex: none; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 24px; position: relative; }
+    .erd__name { height: 60px; display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid var(--line-strong); background: var(--surface-sunken); border-radius: var(--radius-md) var(--radius-md) 0 0; font-size: 26px; font-weight: 600; color: var(--ink); }
+    .erd__row { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-top: 1px solid var(--hairline); color: var(--ink); }
+    .erd__row:nth-child(2) { border-top: 0; }
+    .erd__row em { font-style: normal; font-size: 20px; color: var(--ink-subtle); margin-left: 10px; }
+    .erd__row.is-key { background: var(--ln-tint); }
+    .erd__row.is-key em { color: var(--ln-ink); }
+    .erd__type { color: var(--ink-muted); }
+    .erd__entity > .erd__row:last-of-type { border-radius: 0 0 var(--radius-md) var(--radius-md); }
+    .erd__note { position: absolute; left: 0; top: 100%; margin: 16px 0 0; font-family: var(--font-sans); font-size: 24px; color: var(--ink-subtle); white-space: nowrap; }
+    .erd__link { flex: none; overflow: visible; }
+    .erd__link line { stroke: var(--ln); stroke-width: 3; }
+    .erd__link text { font-family: var(--font-mono); font-size: 22px; fill: var(--ln-ink); }
+  </style>
 </head>
 <body>
 <main class="deck">
@@ -64,20 +82,22 @@
       <ul style="grid-column:span 5;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:40px">
         <li style="display:flex;flex-direction:column;gap:16px"><span class="jc-bar" aria-hidden="true"></span><p class="jc-slide__body" style="color:var(--ink)">토스증권은 공식 REST API를 제공하지 않아요</p></li>
         <li style="display:flex;flex-direction:column;gap:16px"><span class="jc-bar" aria-hidden="true"></span><p class="jc-slide__body" style="color:var(--ink)">대신 웹 UI가 내부에서 호출하는 댓글 API를 써요</p></li>
-        <li style="display:flex;flex-direction:column;gap:16px"><span class="jc-bar" aria-hidden="true"></span><p class="jc-slide__body" style="color:var(--ink)">마지막 댓글 ID를 넘겨 이전 댓글을 이어서 받아요</p></li>
+        <li style="display:flex;flex-direction:column;gap:16px"><span class="jc-bar" aria-hidden="true"></span><p class="jc-slide__body" style="color:var(--ink)">Cookie에 <code style="font-family:var(--font-mono);font-size:.85em">deviceId</code>만 넣으면 값과 상관없이 요청이 성공해요</p></li>
       </ul>
       <div style="grid-column:6 / span 7;align-self:start;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius-md);overflow:hidden">
-        <div style="padding:32px 40px;border-bottom:1px solid var(--hairline);display:flex;flex-direction:column;gap:12px">
+        <div style="padding:24px 40px;border-bottom:1px solid var(--hairline);display:flex;flex-direction:column;gap:12px">
           <span class="jc-slide__label">ENDPOINT</span>
           <span style="font-family:var(--font-mono);font-size:24px;color:var(--ink-subtle)">wts-cert-api.tossinvest.com</span>
           <span style="font-family:var(--font-mono);font-size:36px;font-weight:600;color:var(--ink)"><span style="color:var(--ln-ink)">GET</span> /api/v4/comments</span>
         </div>
-        <div style="padding:32px 40px;display:grid;grid-template-columns:auto auto 1fr;column-gap:32px;row-gap:20px;align-items:baseline;font-size:24px">
+        <div style="padding:24px 40px;display:grid;grid-template-columns:auto auto 1fr;column-gap:32px;row-gap:14px;align-items:baseline;font-size:24px">
           <span class="jc-slide__label" style="grid-column:1 / -1;margin-bottom:4px">QUERY PARAMETERS</span>
           <span style="font-family:var(--font-mono);color:var(--ink)">subjectType</span><span style="font-family:var(--font-mono);color:var(--ln-ink)">STOCK</span><span style="color:var(--ink-muted)">대상 유형</span>
           <span style="font-family:var(--font-mono);color:var(--ink)">subjectId</span><span style="font-family:var(--font-mono);color:var(--ln-ink)">US20100311002</span><span style="color:var(--ink-muted)">종목 코드 (SOXL)</span>
           <span style="font-family:var(--font-mono);color:var(--ink)">commentSortType</span><span style="font-family:var(--font-mono);color:var(--ln-ink)">RECENT</span><span style="color:var(--ink-muted)">최신순 · <span style="font-family:var(--font-mono);color:var(--ln-ink)">POPULAR</span>(인기순) 대신</span>
           <span style="font-family:var(--font-mono);color:var(--ink)">lastCommentId</span><span style="font-family:var(--font-mono);color:var(--ln-ink)">338845846</span><span style="color:var(--ink-muted)">이 댓글보다 이전 것부터</span>
+          <span class="jc-slide__label" style="grid-column:1 / -1;margin-top:16px;margin-bottom:4px">HEADERS</span>
+          <span style="font-family:var(--font-mono);color:var(--ink)">Cookie</span><span style="font-family:var(--font-mono);color:var(--ln-ink)">deviceId=…</span><span style="color:var(--ink-muted)">필수 · 값은 아무거나</span>
         </div>
       </div>
     </div>
@@ -109,6 +129,46 @@
   "totalCount": 1209515,
   "hasNext": true
 }</pre>
+    </div>
+    <span class="jc-slide__page"></span>
+  </section>
+
+  <!-- 06 · 정제·저장 (SlideContent, line 4) -->
+  <section class="jc-root jc-slide jc-l4" aria-label="정제와 저장">
+    <div class="jc-slide__label"><span class="jc-badge">3</span>PROCESSING</div>
+    <h2 class="jc-slide__title" style="margin-top:48px;max-width:1500px">필요한 필드만 골라 PostgreSQL에 쌓아요</h2>
+    <div style="margin-top:72px;flex:1;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--slide-gutter)">
+      <ul style="grid-column:span 5;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:40px">
+        <li style="display:flex;flex-direction:column;gap:16px"><span class="jc-bar" aria-hidden="true"></span><p class="jc-slide__body" style="color:var(--ink)">Airflow DAG로 수집, 정제, 적재를 한 흐름으로 묶어요</p></li>
+        <li style="display:flex;flex-direction:column;gap:16px"><span class="jc-bar" aria-hidden="true"></span><p class="jc-slide__body" style="color:var(--ink)">응답에서 댓글 ID, 제목, 본문 같은 필드만 남겨요</p></li>
+        <li style="display:flex;flex-direction:column;gap:16px"><span class="jc-bar" aria-hidden="true"></span><p class="jc-slide__body" style="color:var(--ink)">작성자 정보 같은 나머지 필드는 저장하지 않아요</p></li>
+      </ul>
+      <div class="erd" style="grid-column:6 / span 7;align-self:start">
+        <div class="erd__entity" style="width:440px">
+          <div class="erd__name">comments</div>
+          <div class="erd__row"><span>comment_id<em>PK</em></span><span class="erd__type">BIGINT</span></div>
+          <div class="erd__row is-key"><span>stock_id<em>FK</em></span><span class="erd__type">TEXT</span></div>
+          <div class="erd__row"><span>title</span><span class="erd__type">TEXT</span></div>
+          <div class="erd__row"><span>message</span><span class="erd__type">TEXT</span></div>
+          <div class="erd__row"><span>created_at</span><span class="erd__type">TIMESTAMPTZ</span></div>
+          <p class="erd__note">댓글 1건 = 1행</p>
+        </div>
+        <svg class="erd__link" width="160" height="200" viewBox="0 0 160 200" aria-label="comments 여러 행이 stocks 한 행을 가리켜요 (N:1)">
+          <line x1="0" y1="133" x2="160" y2="133"/>
+          <line x1="28" y1="133" x2="0" y2="115"/>
+          <line x1="28" y1="133" x2="0" y2="151"/>
+          <line x1="138" y1="119" x2="138" y2="147"/>
+          <line x1="148" y1="119" x2="148" y2="147"/>
+          <text x="14" y="104">N</text>
+          <text x="140" y="104">1</text>
+        </svg>
+        <div class="erd__entity" style="width:360px;margin-top:48px">
+          <div class="erd__name">stocks</div>
+          <div class="erd__row is-key"><span>stock_id<em>PK</em></span><span class="erd__type">TEXT</span></div>
+          <div class="erd__row"><span>ticker</span><span class="erd__type">TEXT</span></div>
+          <p class="erd__note">종목 1개 = 1행</p>
+        </div>
+      </div>
     </div>
     <span class="jc-slide__page"></span>
   </section>
