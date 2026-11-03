@@ -1,0 +1,111 @@
+/* Junction design system (Day theme) — tokens + slide components.
+   Source: Junction design system artifact. Values copied from tokens.json / bundle.css. */
+
+:root {
+  /* Neutrals */
+  --canvas: #f5f7fb;
+  --surface: #ffffff;
+  --surface-sunken: #e9eef6;
+  --ink: #0f1729;
+  --ink-muted: #3f4a5e;
+  --ink-subtle: #5a6579;
+  --hairline: #d5dce8;
+  --line-strong: #74809a;
+  --inverse: #0f1729;
+  --on-inverse: #f5f7fb;
+
+  /* Five lines */
+  --blue: #1d5bd8;    --blue-tint: #e6eeff;    --blue-ink: #1a4fbf;
+  --green: #0c8048;   --green-tint: #e2f5ea;   --green-ink: #0b6b3d;
+  --orange: #d96500;  --orange-tint: #fff0e0;  --orange-ink: #9a4a06;
+  --magenta: #d6266b; --magenta-tint: #fde7ef; --magenta-ink: #b01a55;
+  --violet: #6b46c1;  --violet-tint: #efe9fc;  --violet-ink: #5a37b0;
+  --on-line: #ffffff;
+  --on-orange: #0f1729;
+
+  /* Functional */
+  --signal: #ffcc00;
+  --on-signal: #0f1729;
+  --action: var(--blue);
+  --on-action: var(--on-line);
+  --link: var(--blue-ink);
+  --focus: var(--blue);
+  --success: var(--green-ink);
+  --danger: #c4291c;
+
+  /* Charts */
+  --chart-1: var(--blue);
+  --chart-2: var(--orange);
+  --chart-3: var(--green);
+  --chart-4: var(--magenta);
+  --chart-5: var(--violet);
+  --chart-base: #b3bdcf;
+
+  /* Type */
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Spacing */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px;
+  --space-24: 96px; --space-32: 128px;
+
+  /* Radius */
+  --radius-0: 0px; --radius-sm: 4px; --radius-md: 8px; --radius-pill: 999px;
+
+  /* Layout */
+  --slide-margin: 120px;
+  --slide-gutter: 32px;
+  --line-bar: 8px;
+  --badge-size: 32px;
+  --border-width: 1px;
+}
+
+/* Line context: children read --ln-* */
+.jc-root, .jc-l1 { --ln: var(--blue);    --ln-tint: var(--blue-tint);    --ln-ink: var(--blue-ink);    --ln-on: var(--on-line); }
+.jc-l2           { --ln: var(--green);   --ln-tint: var(--green-tint);   --ln-ink: var(--green-ink);   --ln-on: var(--on-line); }
+.jc-l3           { --ln: var(--orange);  --ln-tint: var(--orange-tint);  --ln-ink: var(--orange-ink);  --ln-on: var(--on-orange); }
+.jc-l4           { --ln: var(--magenta); --ln-tint: var(--magenta-tint); --ln-ink: var(--magenta-ink); --ln-on: var(--on-line); }
+.jc-l5           { --ln: var(--violet);  --ln-tint: var(--violet-tint);  --ln-ink: var(--violet-ink);  --ln-on: var(--on-line); }
+
+.jc-root { font-family: var(--font-sans); color: var(--ink); background: var(--canvas); word-break: keep-all; -webkit-font-smoothing: antialiased; }
+.jc-root, .jc-root * { box-sizing: border-box; }
+
+/* Signature marks */
+.jc-bar { display: block; width: 48px; height: var(--line-bar); background: var(--ln); }
+.jc-strip { display: flex; height: var(--line-bar); width: 240px; }
+.jc-strip > i { flex: 1; }
+.jc-strip > i:nth-child(1) { background: var(--blue); }
+.jc-strip > i:nth-child(2) { background: var(--green); }
+.jc-strip > i:nth-child(3) { background: var(--orange); }
+.jc-strip > i:nth-child(4) { background: var(--magenta); }
+.jc-strip > i:nth-child(5) { background: var(--violet); }
+.jc-mark { background: var(--signal); color: var(--on-signal); padding: 0 4px; }
+.jc-badge { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--badge-size); height: var(--badge-size); border-radius: var(--radius-pill); background: var(--ln); color: var(--ln-on); font-family: var(--font-mono); font-size: 16px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.jc-dot { display: inline-block; width: 10px; height: 10px; border-radius: var(--radius-pill); background: var(--ln); flex: none; }
+
+/* Callout */
+.jc-callout { display: flex; gap: var(--space-4); align-items: flex-start; padding: var(--space-4) var(--space-6); background: var(--ln-tint); border-radius: var(--radius-md); color: var(--ink); }
+.jc-callout__title { margin: 0 0 var(--space-1); font-family: var(--font-mono); font-size: 12px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ln-ink); }
+.jc-callout__body { margin: 0; font-size: 16px; line-height: 1.6; }
+
+/* Slides — 1920×1080 frames */
+.jc-slide { position: relative; width: 1920px; height: 1080px; overflow: hidden; padding: var(--slide-margin); background: var(--canvas); color: var(--ink); font-family: var(--font-sans); word-break: keep-all; display: flex; flex-direction: column; }
+.jc-slide--inverse { background: var(--inverse); color: var(--on-inverse); }
+.jc-slide__label { font-family: var(--font-mono); font-size: 22px; line-height: 1.3; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-subtle); display: flex; align-items: center; gap: var(--space-4); }
+.jc-slide--inverse .jc-slide__label { color: var(--on-inverse); }
+.jc-slide .jc-badge { --badge-size: 56px; font-size: 26px; }
+.jc-slide__bar { display: block; width: 96px; height: var(--line-bar); background: var(--ln); }
+.jc-slide .jc-strip { width: 480px; height: 12px; }
+.jc-slide__page { position: absolute; right: var(--slide-margin); bottom: 64px; font-family: var(--font-mono); font-size: 22px; letter-spacing: .08em; color: var(--ink-subtle); }
+.jc-slide--inverse .jc-slide__page { color: var(--on-inverse); }
+.jc-slide__hero { margin: 0; font-size: 144px; line-height: 1; font-weight: 800; letter-spacing: -0.04em; text-wrap: balance; }
+.jc-slide__title { margin: 0; font-size: 80px; line-height: 1.1; font-weight: 700; letter-spacing: -0.03em; text-wrap: balance; }
+.jc-slide__subtitle { margin: 0; font-size: 44px; line-height: 1.35; font-weight: 500; letter-spacing: -0.015em; color: var(--ink-muted); }
+.jc-slide--inverse .jc-slide__subtitle { color: var(--on-inverse); }
+.jc-slide__body { margin: 0; font-size: 32px; line-height: 1.55; letter-spacing: -0.01em; color: var(--ink-muted); }
+.jc-slide__stat { font-size: 200px; line-height: .95; font-weight: 800; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
+.jc-slide__caption { font-size: 24px; line-height: 1.5; color: var(--ink-subtle); }
+.jc-slide .jc-callout { padding: 32px 40px; }
+.jc-slide .jc-callout__title { font-size: 22px; }
+.jc-slide .jc-callout__body { font-size: 32px; line-height: 1.5; }

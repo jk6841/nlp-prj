@@ -1,0 +1,25 @@
+/* Deck viewer: scales 1920×1080 slides to fit the window, one at a time. */
+
+html, body { margin: 0; height: 100%; background: var(--inverse); overflow: hidden; }
+
+.deck { position: fixed; inset: 0; }
+
+.deck > .jc-slide {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: 0 0;
+  /* Center the scaled slide: shift by half its scaled size */
+  transform: translate(calc(-960px * var(--deck-scale, 1)), calc(-540px * var(--deck-scale, 1))) scale(var(--deck-scale, 1));
+  display: none;
+}
+
+.deck > .jc-slide.is-active { display: flex; }
+
+/* Print / PDF: one slide per page */
+@media print {
+  @page { size: 1920px 1080px; margin: 0; }
+  html, body { height: auto; overflow: visible; background: none; }
+  .deck { position: static; }
+  .deck > .jc-slide { position: relative; left: 0; top: 0; transform: none; display: flex; break-after: page; }
+}
