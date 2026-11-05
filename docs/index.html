@@ -27,6 +27,12 @@
     .erd__link { flex: none; overflow: visible; }
     .erd__link line { stroke: var(--ln); stroke-width: 3; }
     .erd__link text { font-family: var(--font-mono); font-size: 22px; fill: var(--ln-ink); }
+    /* Label categories (slide 07) */
+    .cls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .cls__item { display: flex; flex-direction: column; gap: 8px; padding: 24px; background: var(--ln-tint); border-radius: var(--radius-md); }
+    .cls__code { font-family: var(--font-mono); font-size: 22px; font-weight: 500; letter-spacing: .08em; color: var(--ln-ink); }
+    .cls__name { font-size: 30px; font-weight: 600; color: var(--ink); }
+    .cls__ex { font-size: 24px; color: var(--ink-muted); }
   </style>
 </head>
 <body>
@@ -167,6 +173,46 @@
           <div class="erd__row is-key"><span>stock_id<em>PK</em></span><span class="erd__type">TEXT</span></div>
           <div class="erd__row"><span>ticker</span><span class="erd__type">TEXT</span></div>
           <p class="erd__note">종목 1개 = 1행</p>
+        </div>
+      </div>
+    </div>
+    <span class="jc-slide__page"></span>
+  </section>
+
+  <!-- 07 · 자연어 처리 (SlideContent, line 5) -->
+  <section class="jc-root jc-slide jc-l5" aria-label="자연어 처리">
+    <div class="jc-slide__label"><span class="jc-badge">4</span>NATURAL LANGUAGE PROCESSING</div>
+    <h2 class="jc-slide__title" style="margin-top:48px;max-width:1500px">GPT로 댓글의 가격 표시 통화를 분류해요</h2>
+    <div style="margin-top:72px;flex:1;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--slide-gutter)">
+      <ul style="grid-column:span 5;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:40px">
+        <li style="display:flex;flex-direction:column;gap:16px"><span class="jc-bar" aria-hidden="true"></span><p class="jc-slide__body" style="color:var(--ink)">DB에 쌓인 댓글을 읽어 GPT Batch API로 한꺼번에 보내요</p></li>
+        <li style="display:flex;flex-direction:column;gap:16px"><span class="jc-bar" aria-hidden="true"></span><p class="jc-slide__body" style="color:var(--ink)">댓글마다 가격 언급 없음, 원화, 달러 중 하나로 나눠요</p></li>
+        <li style="display:flex;flex-direction:column;gap:16px"><span class="jc-bar" aria-hidden="true"></span><p class="jc-slide__body" style="color:var(--ink)">결과는 댓글 ID와 분류만 별도 테이블에 저장해요</p></li>
+      </ul>
+      <div style="grid-column:6 / span 7;align-self:start;display:flex;flex-direction:column;gap:56px">
+        <div class="cls">
+          <div class="cls__item"><span class="cls__code">NONE</span><span class="cls__name">가격 언급 없음</span><span class="cls__ex">“역시나~~”</span></div>
+          <div class="cls__item"><span class="cls__code">KRW</span><span class="cls__name">원화</span><span class="cls__ex">“6만원 오면 산다”</span></div>
+          <div class="cls__item"><span class="cls__code">USD</span><span class="cls__name">달러</span><span class="cls__ex">“$45 뚫었네”</span></div>
+        </div>
+        <div class="erd">
+          <div class="erd__entity" style="width:370px">
+            <div class="erd__name">comments</div>
+            <div class="erd__row is-key"><span>comment_id<em>PK</em></span><span class="erd__type">BIGINT</span></div>
+            <div class="erd__row"><span style="color:var(--ink-subtle)">…</span><span></span></div>
+          </div>
+          <svg class="erd__link" width="160" height="120" viewBox="0 0 160 120" aria-label="댓글 1건에 분류 1건 (1:1)">
+            <line x1="0" y1="85" x2="160" y2="85"/>
+            <line x1="14" y1="71" x2="14" y2="99"/>
+            <line x1="146" y1="71" x2="146" y2="99"/>
+            <text x="22" y="62">1</text>
+            <text x="126" y="62">1</text>
+          </svg>
+          <div class="erd__entity" style="width:430px">
+            <div class="erd__name">comment_labels</div>
+            <div class="erd__row is-key"><span>comment_id<em>PK·FK</em></span><span class="erd__type">BIGINT</span></div>
+            <div class="erd__row"><span>price_currency</span><span class="erd__type">TEXT</span></div>
+          </div>
         </div>
       </div>
     </div>
