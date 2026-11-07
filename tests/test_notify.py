@@ -48,3 +48,36 @@ def test_failure_callback_message(monkeypatch):
     assert "RuntimeError: boom" in sent["description"]
     assert sent["fields"] == {"구간": "11-07 14:00 ~ 15:00 KST", "시도": "4/4", "run_id": "r1"}
     assert sent["url"] == "http://airflow/log"
+
+
+def test_deliver_results(monkeypatch):
+    from toss import notify
+
+    hook = {"url": None}
+    monkeypatch.setattr(notify, "_webhook", lambda: hook["url"])
+    posted = []
+
+    class Resp:
+        status_code, text = 204, ""
+
+    monkeypatch.setattr(notify.requests, "post", lambda url, json, timeout: posted.append((url, json)) or Resp())
+    assert notify.deliver("t") == "skipped (no connection)" and posted == []
+
+    hook["url"] = "http://d"
+    assert notify.deliver("t") == "ok"
+    assert posted[0][0] == "http://d" and "embeds" in posted[0][1]
+
+    Resp.status_code, Resp.text = 404, '{"message": "Unknown Webhook"}'
+    assert notify.deliver("t") == 'error: HTTP 404 \'{"message": "Unknown Webhook"}\''
+
+
+def test_send_never_raises(monkeypatch):
+    from toss import notify
+
+    monkeypatch.setattr(notify, "_webhook", lambda: "http://x")
+
+    def boom(*a, **k):
+        raise ConnectionError("down")
+
+    monkeypatch.setattr(notify.requests, "post", boom)
+    notify.send("t")  # 예외 없이 경고만 남긴다

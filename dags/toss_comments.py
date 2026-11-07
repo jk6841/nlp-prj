@@ -107,12 +107,7 @@ def toss_comments():
             if client.retries:
                 summary = ", ".join(f"{k}×{v}" for k, v in client.retries.most_common())
                 log.warning("%s API retries: %s (requests=%d)", name, summary, client.requests)
-                notify.send(
-                    title=f"toss_comments collect [{name}] API 재시도 발생",
-                    level="warning",
-                    fields={"구간": interval, "재시도": summary, "요청 수": str(client.requests)},
-                    url=log_url,
-                )
+                notify.send(**notify.api_retry_message(name, interval, summary, client.requests, log_url))
 
         inserted = repo.insert_comments(rows)
         elapsed = time.monotonic() - started
@@ -125,13 +120,7 @@ def toss_comments():
         if stats.truncated:
             log.warning("%s truncated at max_pages=%s, older comments in this interval are skipped",
                         name, max_pages)
-            notify.send(
-                title=f"toss_comments collect [{name}] max_pages 도달",
-                description="이 구간의 오래된 쪽 댓글은 수집되지 않았습니다.",
-                level="warning",
-                fields={"구간": interval, "max_pages": str(max_pages), "수집": str(stats.collected)},
-                url=log_url,
-            )
+            notify.send(**notify.truncated_message(name, interval, max_pages, stats.collected, log_url))
 
         return {"stock_id": stock_id, "pages": stats.pages, "inserted": inserted,
                 "truncated": stats.truncated, "retries": dict(client.retries)}
