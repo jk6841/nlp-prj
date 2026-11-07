@@ -156,6 +156,8 @@ def run_success_message(interval: str, results: list[dict], run_id: str,
     lines = []
     for r in results:
         line = f"`{r.get('name') or r['stock_id']}` {r['inserted']}건 · {r['pages']}페이지"
+        if r.get("updated"):
+            line += f" · 갱신 {r['updated']}건"
         if r.get("truncated"):
             line += " · ⚠️ max_pages"
         if r.get("retries"):

@@ -9,7 +9,7 @@ data interval(1시간) 하나마다 [start, end) 사이에 작성된 댓글만 �
     airflow backfill create --dag-id toss_comments \
         --from-date 2026-11-06T00:00:00+09:00 --to-date 2026-11-07T00:00:00+09:00 \
         --run-backwards --max-active-runs 1
-- 재실행해도 ON CONFLICT DO NOTHING이라 중복이 생기지 않는다.
+- 재실행해도 중복은 생기지 않는다. 이미 있는 댓글은 본문·좋아요 수 등이 바뀌었을 때만 갱신한다(upsert).
 - 테이블은 sql/schema.sql을 미리 수동으로 실행해 만들어 둔다.
 """
 
@@ -109,20 +109,20 @@ def toss_comments():
                 log.warning("%s API retries: %s (requests=%d)", name, summary, client.requests)
                 notify.send(**notify.api_retry_message(name, interval, summary, client.requests, log_url))
 
-        inserted = repo.insert_comments(rows)
+        inserted, updated = repo.upsert_comments(rows)
         elapsed = time.monotonic() - started
 
         log.info(
-            "%s [%s, %s) cursor=%s pages=%d requests=%d skipped=%d collected=%d inserted=%d elapsed=%.1fs",
+            "%s [%s, %s) cursor=%s pages=%d requests=%d skipped=%d collected=%d inserted=%d updated=%d elapsed=%.1fs",
             name, data_interval_start, data_interval_end, cursor,
-            stats.pages, client.requests, stats.skipped, stats.collected, inserted, elapsed,
+            stats.pages, client.requests, stats.skipped, stats.collected, inserted, updated, elapsed,
         )
         if stats.truncated:
             log.warning("%s truncated at max_pages=%s, older comments in this interval are skipped",
                         name, max_pages)
             notify.send(**notify.truncated_message(name, interval, max_pages, stats.collected, log_url))
 
-        return {"stock_id": stock_id, "name": name, "pages": stats.pages, "inserted": inserted,
+        return {"stock_id": stock_id, "name": name, "pages": stats.pages, "inserted": inserted, "updated": updated,
                 "truncated": stats.truncated, "retries": dict(client.retries)}
 
     @task
