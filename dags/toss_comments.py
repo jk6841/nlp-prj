@@ -122,10 +122,32 @@ def toss_comments():
                         name, max_pages)
             notify.send(**notify.truncated_message(name, interval, max_pages, stats.collected, log_url))
 
-        return {"stock_id": stock_id, "pages": stats.pages, "inserted": inserted,
+        return {"stock_id": stock_id, "name": name, "pages": stats.pages, "inserted": inserted,
                 "truncated": stats.truncated, "retries": dict(client.retries)}
 
-    collect.expand(subject=load_universe())
+    @task
+    def report(results: list[dict], data_interval_start=None, data_interval_end=None,
+               dag_run=None, run_id=None) -> None:
+        """모든 collect가 성공했을 때만 실행돼 run 요약을 알린다.
+
+        backfill run은 run마다 보내면 알림이 수백 개 쌓이므로 보내지 않는다.
+        """
+        results = list(results)
+        total = sum(r["inserted"] for r in results)
+        run_type = getattr(dag_run, "run_type", None)
+        log.info("run summary (run_type=%s): %d stocks, %d inserted: %s", run_type, len(results), total,
+                 {r.get("name") or r["stock_id"]: r["inserted"] for r in results})
+        if run_type == "backfill":
+            log.info("backfill run: success notification skipped")
+            return
+        started = getattr(dag_run, "start_date", None)
+        elapsed = (pendulum.now("UTC") - started).total_seconds() if started else None
+        notify.send(**notify.run_success_message(
+            notify.fmt_interval(data_interval_start, data_interval_end),
+            results, run_id, elapsed, getattr(get_current_context()["ti"], "log_url", None),
+        ))
+
+    report(collect.expand(subject=load_universe()))
 
 
 toss_comments()

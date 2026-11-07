@@ -15,8 +15,8 @@ log = logging.getLogger(__name__)
 
 CONN_ID = "nlp-discord"
 TZ = "Asia/Seoul"
-COLORS = {"error": 0xE5484D, "warning": 0xF5A524, "info": 0x3E63DD}
-ICONS = {"error": "❌", "warning": "⚠️", "info": "ℹ️"}
+COLORS = {"error": 0xE5484D, "warning": 0xF5A524, "info": 0x3E63DD, "success": 0x30A46C}
+ICONS = {"error": "❌", "warning": "⚠️", "info": "ℹ️", "success": "✅"}
 USERNAME = "toss_comments"
 
 
@@ -145,5 +145,33 @@ def truncated_message(name: str, interval: str, max_pages, collected: int,
         description="이 구간의 오래된 쪽 댓글은 수집되지 않았습니다.",
         level="warning",
         fields={"구간": interval, "max_pages": str(max_pages), "수집": str(collected)},
+        url=url,
+    )
+
+
+def run_success_message(interval: str, results: list[dict], run_id: str,
+                        elapsed_sec: float | None = None, url: str | None = None) -> dict:
+    """DAG run 성공 요약. results는 collect task들의 반환값 목록."""
+    results = sorted(results, key=lambda r: r.get("name") or r["stock_id"])
+    lines = []
+    for r in results:
+        line = f"`{r.get('name') or r['stock_id']}` {r['inserted']}건 · {r['pages']}페이지"
+        if r.get("truncated"):
+            line += " · ⚠️ max_pages"
+        if r.get("retries"):
+            line += " · 재시도 " + ", ".join(f"{k}×{v}" for k, v in r["retries"].items())
+        lines.append(line)
+    fields = {
+        "구간": interval,
+        "합계": f"{sum(r['inserted'] for r in results)}건 / {len(results)}종목",
+    }
+    if elapsed_sec is not None:
+        fields["소요"] = f"{elapsed_sec:.0f}초"
+    fields["run_id"] = run_id
+    return dict(
+        title="toss_comments 수집 완료",
+        description="\n".join(lines) or "수집 대상 종목이 없습니다.",
+        level="success",
+        fields=fields,
         url=url,
     )
