@@ -20,6 +20,7 @@ import pendulum
 import yaml
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.sdk import dag, task
+from airflow.timetables.interval import CronDataIntervalTimetable
 
 from toss import repo
 from toss.client import TossClient
@@ -34,7 +35,10 @@ REQUEST_DELAY_SEC = 1.0
 
 
 @dag(
-    schedule="@hourly",
+    # cron 문자열(@hourly 등)의 Airflow 3 기본 timetable은 CronTriggerTimetable이라
+    # data_interval_start == data_interval_end(길이 0)가 된다. [이전 정각, 이번 정각) 구간을
+    # 받으려면 CronDataIntervalTimetable을 명시해야 한다.
+    schedule=CronDataIntervalTimetable("0 * * * *", timezone="Asia/Seoul"),
     start_date=pendulum.datetime(2026, 11, 1, tz="Asia/Seoul"),
     catchup=False,
     max_active_runs=1,
@@ -59,8 +63,12 @@ def toss_comments():
 
     @task(max_active_tis_per_dag=2, retries=3, retry_exponential_backoff=True)
     def collect(subject: dict, data_interval_start=None, data_interval_end=None) -> dict:
-        if data_interval_start is None or data_interval_end is None:
-            raise ValueError("data interval이 없는 run이다. 스케줄 run이나 backfill로 실행해야 한다.")
+        if (data_interval_start is None or data_interval_end is None
+                or data_interval_start >= data_interval_end):
+            raise ValueError(
+                f"수집할 구간이 비어 있다: [{data_interval_start}, {data_interval_end}). "
+                "DAG timetable이 1시간 구간을 주는지 확인해야 한다."
+            )
 
         stock_id = subject["subject_id"]
         cursor = repo.cursor_before(stock_id, data_interval_end)
