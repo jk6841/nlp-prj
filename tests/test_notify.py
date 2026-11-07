@@ -89,7 +89,8 @@ def test_run_success_message():
     m = run_success_message(
         "11-07 14:00 ~ 15:00 KST",
         [
-            {"stock_id": "B", "name": "SOXL", "inserted": 39, "pages": 6, "truncated": False, "retries": {}},
+            {"stock_id": "B", "name": "SOXL", "inserted": 39, "updated": 3, "pages": 6, "truncated": False,
+             "retries": {}},
             {"stock_id": "A", "name": "AAPL", "inserted": 550, "pages": 50, "truncated": True,
              "retries": {"429": 2}},
         ],
@@ -98,7 +99,7 @@ def test_run_success_message():
     assert m["title"] == "toss_comments 수집 완료" and m["level"] == "success"
     assert m["description"].splitlines() == [
         "`AAPL` 550건 · 50페이지 · ⚠️ max_pages · 재시도 429×2",
-        "`SOXL` 39건 · 6페이지",
+        "`SOXL` 39건 · 6페이지 · 갱신 3건",
     ]
     assert m["fields"] == {"구간": "11-07 14:00 ~ 15:00 KST", "합계": "589건 / 2종목",
                            "소요": "12초", "run_id": "scheduled__x"}

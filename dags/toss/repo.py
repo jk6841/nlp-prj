@@ -54,25 +54,48 @@ def cursor_before(stock_id: str, end: datetime) -> int | None:
     return row[0] if row else None
 
 
-def insert_comments(rows: list[tuple]) -> int:
-    """중복은 건너뛰고 실제로 들어간 행 수를 반환한다.
+def upsert_comments(rows: list[tuple]) -> tuple[int, int]:
+    """댓글을 넣거나, 이미 있으면 바뀐 값만 갱신한다. (inserted, updated)를 반환한다.
 
     rows의 각 원소는 toss.collect.to_row()가 만든 튜플이다.
-    ON CONFLICT DO NOTHING으로 건너뛴 행은 rowcount에 잡히지 않는다.
+    - 새 댓글: insert
+    - 이미 있는 댓글: 수정될 수 있는 값(title, message, like_count, reply_count, holding_status)이
+      하나라도 달라졌을 때만 갱신하고 collected_at을 now()로 바꾼다. 같으면 건드리지 않는다.
+      collected_at은 "저장된 값을 마지막으로 받아 쓴 시각"이 된다.
+    - comment_id, stock_id, author_id, created_at은 바뀌지 않는 값이라 갱신하지 않는다.
+    같은 구간을 다시 돌리면(예: backfill --reprocess-behavior completed) 수정된 댓글이 반영된다.
     """
     if not rows:
-        return 0
+        return 0, 0
     cols = list(zip(*rows))
-    return _execute(
-        """
-        INSERT INTO comments
-            (comment_id, stock_id, author_id, holding_status, title, message, created_at,
-             like_count, reply_count)
-        SELECT * FROM unnest(
-            %s::bigint[], %s::text[], %s::bigint[], %s::text[], %s::text[], %s::text[],
-            %s::timestamptz[], %s::int[], %s::int[]
-        )
-        ON CONFLICT (comment_id) DO NOTHING
-        """,
-        tuple(list(c) for c in cols),
-    )
+    with closing(_hook().get_conn()) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO comments
+                    (comment_id, stock_id, author_id, holding_status, title, message, created_at,
+                     like_count, reply_count)
+                SELECT * FROM unnest(
+                    %s::bigint[], %s::text[], %s::bigint[], %s::text[], %s::text[], %s::text[],
+                    %s::timestamptz[], %s::int[], %s::int[]
+                )
+                ON CONFLICT (comment_id) DO UPDATE
+                   SET title          = EXCLUDED.title,
+                       message        = EXCLUDED.message,
+                       like_count     = EXCLUDED.like_count,
+                       reply_count    = EXCLUDED.reply_count,
+                       holding_status = EXCLUDED.holding_status,
+                       collected_at   = now()
+                 WHERE (comments.title, comments.message, comments.like_count,
+                        comments.reply_count, comments.holding_status)
+                       IS DISTINCT FROM
+                       (EXCLUDED.title, EXCLUDED.message, EXCLUDED.like_count,
+                        EXCLUDED.reply_count, EXCLUDED.holding_status)
+                RETURNING (xmax = 0) AS inserted
+                """,
+                tuple(list(c) for c in cols),
+            )
+            flags = [r[0] for r in cur.fetchall()]  # 바뀐 게 없는 기존 행은 반환되지 않는다
+        conn.commit()
+    inserted = sum(1 for f in flags if f)
+    return inserted, len(flags) - inserted
