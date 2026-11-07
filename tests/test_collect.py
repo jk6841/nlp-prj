@@ -1,7 +1,9 @@
+import logging
 import sys
 from pathlib import Path
 
 import pendulum
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "dags"))
 
@@ -118,3 +120,28 @@ def test_missing_holding_is_none():
     del c["holding"]
     rows, _ = collect_interval(FakeApi([c]).fetch_page, "S", None, START, END)
     assert rows[0][3] is None
+
+
+def test_failure_logs_progress_context(caplog):
+    api = FakeApi([comment(i, minutes(59 - i)) for i in range(10, 0, -1)], page_size=3)
+    calls = {"n": 0}
+
+    def flaky(subject_id, last_id):
+        calls["n"] += 1
+        if calls["n"] == 3:
+            raise RuntimeError("boom")
+        return api.fetch_page(subject_id, last_id)
+
+    with caplog.at_level(logging.ERROR, logger="toss.collect"), pytest.raises(RuntimeError):
+        collect_interval(flaky, "S", None, START, END)
+    msg = caplog.records[-1].getMessage()
+    assert "collect failed subject=S" in msg
+    assert "lastCommentId=5" in msg and "pages=2" in msg and "collected=6" in msg
+
+
+def test_progress_logged_every_n_pages(caplog):
+    api = FakeApi([comment(i, minutes(59)) for i in range(20, 0, -1)], page_size=2)
+    with caplog.at_level(logging.INFO, logger="toss.collect"):
+        collect_interval(api.fetch_page, "S", None, START, END, progress_every=4)
+    progress = [r.getMessage() for r in caplog.records if r.getMessage().startswith("progress")]
+    assert len(progress) == 2 and "pages=4" in progress[0] and "pages=8" in progress[1]

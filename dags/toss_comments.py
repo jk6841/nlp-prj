@@ -22,7 +22,7 @@ from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.sdk import dag, get_current_context, task
 from airflow.timetables.interval import CronDataIntervalTimetable
 
-from toss import repo
+from toss import notify, repo
 from toss.client import TossClient
 from toss.collect import collect_interval
 
@@ -42,6 +42,8 @@ REQUEST_DELAY_SEC = 1.0
     start_date=pendulum.datetime(2026, 11, 1, tz="Asia/Seoul"),
     catchup=False,
     max_active_runs=1,
+    # 모든 task: Airflow 재시도 시와 최종 실패 시 Discord 알림
+    default_args={"on_retry_callback": notify.on_retry, "on_failure_callback": notify.on_failure},
     tags=["toss", "comments"],
 )
 def toss_comments():
@@ -68,8 +70,9 @@ def toss_comments():
         map_index_template="{{ ticker }}",  # UI에 0, 1 대신 SOXL, AAPL로 표시
     )
     def collect(subject: dict, data_interval_start=None, data_interval_end=None) -> dict:
-        # 가장 먼저 설정해야 task가 실패해도 티커로 표시된다.
-        get_current_context()["ticker"] = subject["name"]
+        # 가장 먼저 설정해야 task가 실패해도 티커로 표시되고, 실패 알림에도 티커가 들어간다.
+        context = get_current_context()
+        context["ticker"] = subject["name"]
 
         if (data_interval_start is None or data_interval_end is None
                 or data_interval_start >= data_interval_end):
@@ -81,29 +84,46 @@ def toss_comments():
         stock_id = subject["subject_id"]
         cursor = repo.cursor_before(stock_id, data_interval_end)
 
+        name = subject["name"]
+        max_pages = subject.get("max_pages")
+        interval = notify.fmt_interval(data_interval_start, data_interval_end)
+        log_url = getattr(context["ti"], "log_url", None)
+        client = TossClient(delay_sec=REQUEST_DELAY_SEC)
+
+        log.info("%s [%s, %s) start cursor=%s max_pages=%s",
+                 name, data_interval_start, data_interval_end, cursor, max_pages)
         started = time.monotonic()
-        rows, stats = collect_interval(
-            fetch_page=TossClient(delay_sec=REQUEST_DELAY_SEC).fetch_page,
-            subject_id=stock_id,
-            cursor=cursor,
-            start=data_interval_start,
-            end=data_interval_end,
-            max_pages=subject.get("max_pages"),
-        )
+        try:
+            rows, stats = collect_interval(
+                fetch_page=client.fetch_page,
+                subject_id=stock_id,
+                cursor=cursor,
+                start=data_interval_start,
+                end=data_interval_end,
+                max_pages=max_pages,
+            )
+        finally:
+            # 성공·실패와 상관없이, API 재시도가 있었으면 한 번에 모아서 알린다.
+            if client.retries:
+                summary = ", ".join(f"{k}×{v}" for k, v in client.retries.most_common())
+                log.warning("%s API retries: %s (requests=%d)", name, summary, client.requests)
+                notify.send(**notify.api_retry_message(name, interval, summary, client.requests, log_url))
+
         inserted = repo.insert_comments(rows)
         elapsed = time.monotonic() - started
 
         log.info(
-            "%s [%s, %s) cursor=%s pages=%d skipped=%d collected=%d inserted=%d elapsed=%.1fs",
-            subject["name"], data_interval_start, data_interval_end, cursor,
-            stats.pages, stats.skipped, stats.collected, inserted, elapsed,
+            "%s [%s, %s) cursor=%s pages=%d requests=%d skipped=%d collected=%d inserted=%d elapsed=%.1fs",
+            name, data_interval_start, data_interval_end, cursor,
+            stats.pages, client.requests, stats.skipped, stats.collected, inserted, elapsed,
         )
         if stats.truncated:
             log.warning("%s truncated at max_pages=%s, older comments in this interval are skipped",
-                        subject["name"], subject.get("max_pages"))
+                        name, max_pages)
+            notify.send(**notify.truncated_message(name, interval, max_pages, stats.collected, log_url))
 
         return {"stock_id": stock_id, "pages": stats.pages, "inserted": inserted,
-                "truncated": stats.truncated}
+                "truncated": stats.truncated, "retries": dict(client.retries)}
 
     collect.expand(subject=load_universe())
 
