@@ -19,7 +19,7 @@ import time
 import pendulum
 import yaml
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-from airflow.sdk import dag, task
+from airflow.sdk import dag, get_current_context, task
 from airflow.timetables.interval import CronDataIntervalTimetable
 
 from toss import repo
@@ -61,8 +61,16 @@ def toss_comments():
                  len(subjects), len(enabled), [s["name"] for s in enabled])
         return enabled
 
-    @task(max_active_tis_per_dag=2, retries=3, retry_exponential_backoff=True)
+    @task(
+        max_active_tis_per_dag=2,
+        retries=3,
+        retry_exponential_backoff=True,
+        map_index_template="{{ ticker }}",  # UI에 0, 1 대신 SOXL, AAPL로 표시
+    )
     def collect(subject: dict, data_interval_start=None, data_interval_end=None) -> dict:
+        # 가장 먼저 설정해야 task가 실패해도 티커로 표시된다.
+        get_current_context()["ticker"] = subject["name"]
+
         if (data_interval_start is None or data_interval_end is None
                 or data_interval_start >= data_interval_end):
             raise ValueError(
