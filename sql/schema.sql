@@ -3,7 +3,6 @@
 CREATE TABLE IF NOT EXISTS stocks (
     stock_id   TEXT        PRIMARY KEY,
     ticker     TEXT        NOT NULL,
-    is_active  BOOLEAN     NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

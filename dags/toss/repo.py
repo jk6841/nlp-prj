@@ -13,16 +13,15 @@ def _hook() -> PostgresHook:
 
 
 def upsert_stocks(subjects: list[dict]) -> None:
-    rows = [(s["subject_id"], s["name"], bool(s.get("enabled", False))) for s in subjects]
+    rows = [(s["subject_id"], s["name"]) for s in subjects]
     # closing: 연결을 닫는다. conn: 블록이 끝나면 commit(예외 시 rollback)한다.
     with closing(_hook().get_conn()) as conn, conn, conn.cursor() as cur:
         execute_values(
             cur,
             """
-            INSERT INTO stocks (stock_id, ticker, is_active) VALUES %s
+            INSERT INTO stocks (stock_id, ticker) VALUES %s
             ON CONFLICT (stock_id) DO UPDATE
                SET ticker = EXCLUDED.ticker,
-                   is_active = EXCLUDED.is_active,
                    updated_at = now()
             """,
             rows,
