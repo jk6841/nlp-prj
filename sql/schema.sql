@@ -8,15 +8,16 @@ CREATE TABLE IF NOT EXISTS stocks (
 );
 
 CREATE TABLE IF NOT EXISTS comments (
-    comment_id   BIGINT      PRIMARY KEY,
-    stock_id     TEXT        NOT NULL REFERENCES stocks (stock_id),
-    author_id    BIGINT,     -- 토스 authorUserProfileId. 닉네임·프로필은 저장하지 않는다.
-    title        TEXT,
-    message      TEXT,
-    created_at   TIMESTAMPTZ NOT NULL,
-    like_count   INTEGER,
-    reply_count  INTEGER,
-    collected_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    comment_id     BIGINT      PRIMARY KEY,
+    stock_id       TEXT        NOT NULL REFERENCES stocks (stock_id),
+    author_id      BIGINT,              -- 토스 authorUserProfileId. 닉네임·프로필은 저장하지 않는다.
+    holding_status TEXT,                -- holding.shareHoldingStatus. 'HOLDING' 또는 NULL
+    title          TEXT,
+    message        TEXT,
+    created_at     TIMESTAMPTZ NOT NULL,
+    like_count     INTEGER,
+    reply_count    INTEGER,
+    collected_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS comments_stock_created_idx

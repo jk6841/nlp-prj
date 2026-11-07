@@ -34,6 +34,7 @@ def to_row(stock_id: str, c: dict, created_at: datetime) -> tuple:
         int(c["commentId"]),
         stock_id,
         c.get("authorUserProfileId"),
+        (c.get("holding") or {}).get("shareHoldingStatus"),
         msg.get("title"),
         msg.get("message"),
         created_at,
