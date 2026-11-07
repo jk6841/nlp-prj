@@ -1,68 +1,95 @@
 """토스증권 커뮤니티 댓글 수집 DAG.
 
-웹 UI가 내부에서 호출하는 댓글 API(GET /api/v4/comments)를 호출해 응답을 로그로 남긴다.
-지금은 첫 페이지 1회 호출 후 로그 출력까지만 한다. 적재(PostgreSQL)는 이후 단계에서 추가한다.
+data interval(1시간) 하나마다 [start, end) 사이에 작성된 댓글만 모아 nlp-postgres에 적재한다.
+
+- 수집 대상: nlp-minio의 nlp 버킷 root universe.yaml에서 enabled: true인 종목
+- 시작 커서: DB에 이미 있는 end 이후 댓글 중 가장 오래된 comment_id (없으면 최신부터)
+- 과거 데이터: 같은 DAG를 과거 방향으로 backfill한다. 더 최신 구간이 먼저 끝나 있으므로
+  이미 지나온 페이지를 다시 받지 않는다.
+    airflow backfill create --dag-id toss_comments \
+        --from-date 2026-11-06T00:00:00+09:00 --to-date 2026-11-07T00:00:00+09:00 \
+        --run-backwards --max-active-runs 1
+- 재실행해도 ON CONFLICT DO NOTHING이라 중복이 생기지 않는다.
+- 테이블은 sql/schema.sql을 미리 수동으로 실행해 만들어 둔다.
 """
 
 import logging
-import uuid
+import time
 
 import pendulum
-import requests
+import yaml
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.sdk import dag, task
+
+from toss import repo
+from toss.client import TossClient
+from toss.collect import collect_interval
 
 log = logging.getLogger(__name__)
 
-API_URL = "https://wts-cert-api.tossinvest.com/api/v4/comments"
+MINIO_CONN_ID = "nlp-minio"
+UNIVERSE_BUCKET = "nlp"
+UNIVERSE_KEY = "universe.yaml"
+REQUEST_DELAY_SEC = 1.0
 
 
 @dag(
-    schedule=None,
+    schedule="@hourly",
     start_date=pendulum.datetime(2026, 11, 1, tz="Asia/Seoul"),
     catchup=False,
+    max_active_runs=1,
     tags=["toss", "comments"],
-    params={
-        "subject_id": "US20100311002",  # SOXL
-        "sort_type": "RECENT",  # RECENT | POPULAR
-    },
 )
 def toss_comments():
     @task
-    def fetch_comments(params=None):
-        query = {
-            "subjectType": "STOCK",
-            "subjectId": params["subject_id"],
-            "commentSortType": params["sort_type"],
-        }
-        headers = {
-            # Cookie에 deviceId만 있으면 값과 상관없이 요청이 성공한다.
-            "Cookie": f"deviceId={uuid.uuid4()}",
-            # requests 기본 UA(python-requests/*)는 403으로 막힌다.
-            "User-Agent": "Mozilla/5.0",
-        }
+    def load_universe() -> list[dict]:
+        raw = S3Hook(aws_conn_id=MINIO_CONN_ID).read_key(UNIVERSE_KEY, UNIVERSE_BUCKET)
+        subjects = (yaml.safe_load(raw) or {}).get("subjects") or []
 
-        resp = requests.get(API_URL, params=query, headers=headers, timeout=30)
-        resp.raise_for_status()
-        result = resp.json()["result"]
+        repo.upsert_stocks(subjects)
+
+        enabled = [
+            {"subject_id": s["subject_id"], "name": s["name"], "max_pages": s.get("max_pages")}
+            for s in subjects
+            if s.get("enabled")
+        ]
+        log.info("universe: %d subjects, %d enabled: %s",
+                 len(subjects), len(enabled), [s["name"] for s in enabled])
+        return enabled
+
+    @task(max_active_tis_per_dag=2, retries=3, retry_exponential_backoff=True)
+    def collect(subject: dict, data_interval_start=None, data_interval_end=None) -> dict:
+        if data_interval_start is None or data_interval_end is None:
+            raise ValueError("data interval이 없는 run이다. 스케줄 run이나 backfill로 실행해야 한다.")
+
+        stock_id = subject["subject_id"]
+        cursor = repo.cursor_before(stock_id, data_interval_end)
+
+        started = time.monotonic()
+        rows, stats = collect_interval(
+            fetch_page=TossClient(delay_sec=REQUEST_DELAY_SEC).fetch_page,
+            subject_id=stock_id,
+            cursor=cursor,
+            start=data_interval_start,
+            end=data_interval_end,
+            max_pages=subject.get("max_pages"),
+        )
+        inserted = repo.insert_comments(rows)
+        elapsed = time.monotonic() - started
 
         log.info(
-            "totalCount=%s hasNext=%s key=%s count=%d",
-            result.get("totalCount"),
-            result.get("hasNext"),
-            result.get("key"),
-            len(result["results"]),
+            "%s [%s, %s) cursor=%s pages=%d skipped=%d collected=%d inserted=%d elapsed=%.1fs",
+            subject["name"], data_interval_start, data_interval_end, cursor,
+            stats.pages, stats.skipped, stats.collected, inserted, elapsed,
         )
-        for c in result["results"]:
-            msg = c.get("message") or {}
-            log.info(
-                "[%s] %s | %s | %s",
-                c.get("commentId"),
-                c.get("createdAt"),
-                msg.get("title", ""),
-                msg.get("message", ""),
-            )
+        if stats.truncated:
+            log.warning("%s truncated at max_pages=%s, older comments in this interval are skipped",
+                        subject["name"], subject.get("max_pages"))
 
-    fetch_comments()
+        return {"stock_id": stock_id, "pages": stats.pages, "inserted": inserted,
+                "truncated": stats.truncated}
+
+    collect.expand(subject=load_universe())
 
 
 toss_comments()
