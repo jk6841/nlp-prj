@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS stocks (
 CREATE TABLE IF NOT EXISTS comments (
     comment_id   BIGINT      PRIMARY KEY,
     stock_id     TEXT        NOT NULL REFERENCES stocks (stock_id),
+    author_id    BIGINT,     -- 토스 authorUserProfileId. 닉네임·프로필은 저장하지 않는다.
     title        TEXT,
     message      TEXT,
     created_at   TIMESTAMPTZ NOT NULL,
@@ -20,3 +21,6 @@ CREATE TABLE IF NOT EXISTS comments (
 
 CREATE INDEX IF NOT EXISTS comments_stock_created_idx
     ON comments (stock_id, created_at);
+
+CREATE INDEX IF NOT EXISTS comments_author_idx
+    ON comments (author_id);

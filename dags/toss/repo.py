@@ -52,7 +52,8 @@ def insert_comments(rows: list[tuple]) -> int:
             cur,
             """
             INSERT INTO comments
-                (comment_id, stock_id, title, message, created_at, like_count, reply_count)
+                (comment_id, stock_id, author_id, title, message, created_at,
+                 like_count, reply_count)
             VALUES %s
             ON CONFLICT (comment_id) DO NOTHING
             RETURNING comment_id

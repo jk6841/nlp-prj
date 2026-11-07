@@ -3,7 +3,7 @@
 API는 최신 → 과거 방향으로만 넘어가고, commentId 내림차순과 createdAt 내림차순이 같다.
 그래서 커서부터 받으면서
   - created_at >= end   : 이 구간보다 최신이라 건너뛴다
-  - start <= created_at : 모은다
+  - start <= created_at : 모은다 (작성자는 authorUserProfileId만 남긴다)
   - created_at < start  : 구간을 지나쳤으니 멈춘다
 Airflow에 의존하지 않아 단위 테스트할 수 있다.
 """
@@ -33,6 +33,7 @@ def to_row(stock_id: str, c: dict, created_at: datetime) -> tuple:
     return (
         int(c["commentId"]),
         stock_id,
+        c.get("authorUserProfileId"),
         msg.get("title"),
         msg.get("message"),
         created_at,

@@ -17,6 +17,8 @@ def comment(cid: int, at: pendulum.DateTime) -> dict:
     return {
         "commentId": cid,
         "createdAt": at.isoformat(),
+        "authorUserProfileId": 1000 + cid,
+        "author": {"userProfileId": 1000 + cid, "nickname": "닉네임"},
         "message": {"title": "", "message": f"m{cid}"},
         "statistic": {"likeCount": 1, "replyCount": 0},
     }
@@ -102,7 +104,8 @@ def test_row_shape_and_nanosecond_timestamp():
     c["createdAt"] = "2026-11-07T14:05:04.380634567+09:00"
     api = FakeApi([c])
     rows, _ = collect_interval(api.fetch_page, "US20100311002", None, START, END)
-    comment_id, stock_id, title, message, created_at, likes, replies = rows[0]
-    assert (comment_id, stock_id, title, message, likes, replies) == (
-        1, "US20100311002", "", "m1", 1, 0)
+    comment_id, stock_id, author_id, title, message, created_at, likes, replies = rows[0]
+    assert (comment_id, stock_id, author_id, title, message, likes, replies) == (
+        1, "US20100311002", 1001, "", "m1", 1, 0)
+    assert "닉네임" not in rows[0]
     assert START <= created_at < END
